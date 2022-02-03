@@ -71,7 +71,7 @@ public class KeypadButtons : MonoBehaviour
         int order = 1;
         foreach(Material keyMat in keyMats){
             int randomValue = (int)Rnd.Range(0, 6f); 
-            correctValues[order-1] += randomValue;
+            correctValues[order-1] += randomValue; // Row
             keyMat.color = colors[randomValue];
             Debug.Log("Key " + order + ": " + keyMat.color);
             order++;
@@ -79,9 +79,10 @@ public class KeypadButtons : MonoBehaviour
         order = 1;
         Debug.Log("----------------------------------");
         Debug.Log("Button Colors in order (TL, TR, BL, BR): ");
+        Debug.Log(correctValues[0] + " " + correctValues[1] + " " + correctValues[2] + " " + correctValues[3]);
         foreach(Material buttonMat in buttonMats){
             int randomValue = (int)Rnd.Range(0, 6f); 
-            correctValues[order-1] += randomValue;
+            correctValues[order-1] = valuesForTable[correctValues[order-1]][randomValue];
             buttonMat.color = colors[randomValue];
             Debug.Log("Button " + order + ": " + buttonMat.color);
             order++;
