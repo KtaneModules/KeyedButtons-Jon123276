@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -45,6 +45,18 @@ public class KeypadButtons : MonoBehaviour
         }
         keyObject.SetActive(false);
     }
+    private IEnumerator bringKeysBack(GameObject keyObject, MeshRenderer renderer){
+        keyObject.SetActive(true);
+        float duration = 2.0f;
+        float elapsed = 0.0f;
+        while (elapsed < duration){
+            keyObject.transform.localPosition = new Vector3(keyObject.transform.localPosition.x, Mathf.Lerp(0.04837f, 0.0247f, elapsed/duration), keyObject.transform.localPosition.z);
+            if (renderer.material.color.a < 0)
+                renderer.material.color = new Color(renderer.material.color.r, renderer.material.color.g, renderer.material.color.b, renderer.material.color.a + 0.005f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
 	private IEnumerator pressButton(GameObject buttonObject, MeshRenderer renderer){
         float duration = 1.0f;
         float elapsed = 0.0f;
@@ -57,22 +69,19 @@ public class KeypadButtons : MonoBehaviour
         elapsed = 0.0f;
         while (elapsed < duration){
             buttonObject.transform.localPosition = new Vector3(buttonObject.transform.localPosition.x, Mathf.Lerp(0.005f, 0.01f, elapsed/duration), buttonObject.transform.localPosition.z);
-            if (renderer.material.color.a > 0)
-                renderer.material.color = new Color(renderer.material.color.r, renderer.material.color.g, renderer.material.color.b, renderer.material.color.a - 0.005f);
             elapsed += Time.deltaTime;
             yield return null;
         }
     }
-    private void Start()
-    {
-        _moduleId = _moduleIdCounter++;
+    private void Beginning(){
         Debug.Log("Starting\n--------------------------------");
         Debug.Log("Key Colors in order (TL, TR, BL, BR): ");
         int order = 1;
         foreach(Material keyMat in keyMats){
-            int randomValue = (int)Rnd.Range(0, 6f); 
+            int randomValue = (int)Rnd.Range(0, 7); 
             correctValues[order-1] += randomValue; // Row
             keyMat.color = colors[randomValue];
+            keyObjects[order-1].GetComponent<MeshRenderer>().material = keyMat;
             Debug.Log("Key " + order + ": " + keyMat.color);
             order++;
         }
@@ -81,9 +90,10 @@ public class KeypadButtons : MonoBehaviour
         Debug.Log("Button Colors in order (TL, TR, BL, BR): ");
         Debug.Log(correctValues[0] + " " + correctValues[1] + " " + correctValues[2] + " " + correctValues[3]);
         foreach(Material buttonMat in buttonMats){
-            int randomValue = (int)Rnd.Range(0, 6f); 
+            int randomValue = (int)Rnd.Range(0, 7); 
             correctValues[order-1] = valuesForTable[correctValues[order-1]][randomValue];
             buttonMat.color = colors[randomValue];
+            buttonObjects[order-1].GetComponent<MeshRenderer>().material = buttonMat;
             Debug.Log("Button " + order + ": " + buttonMat.color);
             order++;
         }
@@ -95,6 +105,11 @@ public class KeypadButtons : MonoBehaviour
             order++;
         }
         order = 1;
+    }
+    private void Start()
+    {
+        _moduleId = _moduleIdCounter++;
+        Beginning();
         keys[0].OnInteract += delegate{
             Debug.Log("TL being clicked!");
             StartCoroutine(liftKeys(keyObjects[0], meshRenderers[0]));
@@ -149,6 +164,13 @@ public class KeypadButtons : MonoBehaviour
         if (numberOfPresses == 4){
             if (numberOfCorrectButtons != 4){
                 Module.OnStrike();
+                for (int i = 0; i < keyObjects.Length; i++){
+                    StartCoroutine(bringKeysBack(keyObjects[i], meshRenderers[i]));
+                }
+                correctValues = new int[]{0, 0, 0, 0};
+                numberOfCorrectButtons = 0;
+                numberOfPresses = 0;
+                Beginning();
             }
             else{
                 Module.OnPass();
