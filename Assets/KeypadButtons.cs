@@ -76,7 +76,8 @@ public class KeypadButtons : MonoBehaviour
             var curTime = (int)BombInfo.GetTime() % 10;
             if (_correctValues[btn] == curTime)
             {
-                Debug.LogFormat("[Keyed Buttons #{0}] Correctly pressed the {1} button on a {2}.", _moduleId, btn == 0 ? "top left" : btn == 1 ? "top right" : btn == 2 ? "bottom left" : "bottom right", _correctValues[btn]);
+                if (_correctlyPressed[btn] == false)
+                    Debug.LogFormat("[Keyed Buttons #{0}] Correctly pressed the {1} button on a {2}.", _moduleId, btn == 0 ? "top left" : btn == 1 ? "top right" : btn == 2 ? "bottom left" : "bottom right", _correctValues[btn]);
                 _correctlyPressed[btn] = true;
                 if (!_correctlyPressed.Contains(false))
                 {
