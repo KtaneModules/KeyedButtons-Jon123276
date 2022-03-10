@@ -1,236 +1,241 @@
-using System;
+﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KModkit;
-using System.Text.RegularExpressions;
 using Rnd = UnityEngine.Random;
-public enum ColorNames{
-    Red,
-    Green,
-    Blue,
-    Yellow,
-    Magenta,
-    Cyan,
-    Black
-};
+using System.Text.RegularExpressions;
+
 public class KeypadButtons : MonoBehaviour
 {
     public KMBombModule Module;
     public KMBombInfo BombInfo;
     public KMAudio Audio;
-    public KMSelectable[] keys;
-    public GameObject[] keyObjects;
-    public GameObject[] buttonObjects;
-    public MeshRenderer[] meshRenderers;
-    public Material[] buttonMats;
-    public Material[] keyMats;
-    public KMSelectable[] buttons;
-    public static Color[] colors = new Color[] { Color.red, Color.green, Color.blue, Color.yellow, Color.magenta, Color.cyan, Color.black };
-    public static int[][] valuesForTable = new int[][]{
-        new int[]{0,1,2,3,4,5,6},
-        new int[]{6,0,1,2,3,4,5},
-        new int[]{5,6,0,1,2,3,4},
-        new int[]{4,5,6,0,1,2,3},
-        new int[]{3,4,5,6,0,1,2},
-        new int[]{2,3,4,5,6,0,1},
-        new int[]{1,2,3,4,5,6,0}
+
+    public KMSelectable[] KeySels;
+    public KMSelectable[] ButtonSels;
+    public GameObject[] KeyObjs;
+    public GameObject[] ButtonCapObjs;
+    public GameObject[] KeyParents;
+    public Material[] ColorMats;
+
+    private static readonly string[] _colornames = new string[7] { "RED", "GREEN", "BLUE", "YELLOW", "CYAN", "MAGENTA", "BLACK" };
+    private static readonly int[][] _talbeValues = new int[7][] {
+        new int[7] { 0, 1, 2, 3, 4, 5, 6 },
+        new int[7] { 6, 0, 1, 2, 3, 4, 5 },
+        new int[7] { 5, 6, 0, 1, 2, 3, 4 },
+        new int[7] { 4, 5, 6, 0, 1, 2, 3 },
+        new int[7] { 3, 4, 5, 6, 0, 1, 2 },
+        new int[7] { 2, 3, 4, 5, 6, 0, 1 },
+        new int[7] { 1, 2, 3, 4, 5, 6, 0 }
     };
-    private int[] correctValues = {0, 0, 0, 0};
+    private int[] _correctValues = new int[4];
     private int _moduleId;
     private static int _moduleIdCounter = 1;
     private bool _moduleSolved;
-    int numberOfCorrectButtons = 0;
-    int numberOfPresses = 0;
-    private IEnumerator liftKeys(GameObject keyObject, MeshRenderer renderer){
-        float duration = 2.0f;
-        float elapsed = 0.0f;
-        while (elapsed < duration){
-            keyObject.transform.localPosition = new Vector3(keyObject.transform.localPosition.x, Mathf.Lerp(0.0247f, 0.04837f, elapsed/duration), keyObject.transform.localPosition.z);
-            if (renderer.material.color.a > 0)
-                renderer.material.color = new Color(renderer.material.color.r, renderer.material.color.g, renderer.material.color.b, renderer.material.color.a - 0.005f);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-        keyObject.SetActive(false);
-    }
-    private IEnumerator bringKeysBack(GameObject keyObject, MeshRenderer renderer){
-        keyObject.SetActive(true);
-        float duration = 2.0f;
-        float elapsed = 0.0f;
-        while (elapsed < duration){
-            keyObject.transform.localPosition = new Vector3(keyObject.transform.localPosition.x, Mathf.Lerp(0.04837f, 0.0247f, elapsed/duration), keyObject.transform.localPosition.z);
-            if (renderer.material.color.a < 0)
-                renderer.material.color = new Color(renderer.material.color.r, renderer.material.color.g, renderer.material.color.b, renderer.material.color.a + 0.005f);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-    }
-	private IEnumerator pressButton(GameObject buttonObject, MeshRenderer renderer){
-        float duration = 1.0f;
-        float elapsed = 0.0f;
-        while (elapsed < duration){
-            buttonObject.transform.localPosition = new Vector3(buttonObject.transform.localPosition.x, Mathf.Lerp(0.01f, 0.005f, elapsed/duration), buttonObject.transform.localPosition.z);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-        duration = 1.0f;
-        elapsed = 0.0f;
-        while (elapsed < duration){
-            buttonObject.transform.localPosition = new Vector3(buttonObject.transform.localPosition.x, Mathf.Lerp(0.005f, 0.01f, elapsed/duration), buttonObject.transform.localPosition.z);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-    }
-    private void Beginning(){
-        Debug.LogFormat("[Keyed Buttons #{0}] Starting\n--------------------------------", _moduleId);
-        Debug.LogFormat("[Keyed Buttons #{0}] Key Colors in order (TL, TR, BL, BR): ", _moduleId);
-        int order = 1;
-        foreach(Material keyMat in keyMats){
-            int randomValue = (int)Rnd.Range(0, 7); 
-            correctValues[order-1] += randomValue; // Row
-            keyMat.color = colors[randomValue];
-            keyObjects[order-1].GetComponent<MeshRenderer>().material = keyMat;
-            Debug.LogFormat("[Keyed Buttons #{0}]Key {1}: {2}", _moduleId, order, (ColorNames)randomValue);
-            order++;
-        }
-        order = 1;
-        Debug.LogFormat("[Keyed Buttons #{0}]----------------------------------", _moduleId);
-        Debug.LogFormat("[Keyed Buttons #{0}]Button Colors in order (TL, TR, BL, BR): ", _moduleId);
-        Debug.LogFormat( correctValues[0] + " " + correctValues[1] + " " + correctValues[2] + " " + correctValues[3]);
-        foreach(Material buttonMat in buttonMats){
-            int randomValue = (int)Rnd.Range(0, 7); 
-            correctValues[order-1] = valuesForTable[correctValues[order-1]][randomValue];
-            buttonMat.color = colors[randomValue];
-            buttonObjects[order-1].GetComponent<MeshRenderer>().material = buttonMat;
-            Debug.LogFormat("[Keyed Buttons #{0}]Button {1}: {2}", _moduleId, order, (ColorNames)randomValue);
-            order++;
-        }
-        order = 1;
-        Debug.LogFormat("----------------------------------", _moduleId);
-        Debug.LogFormat("Correct Values in order (TL, TR, BL, BR): ", _moduleId);
-        foreach(int val in correctValues) {
-            Debug.LogFormat("[Keyed Buttons #{0}]Correct value {1}: {2}", _moduleId, order, val);
-            order++;
-        }
-        order = 1;
-    }
-    private void Awake()
+
+    private int[] _keyColors = new int[4];
+    private int[] _buttonColors = new int[4];
+    private bool[] _isAnimating = new bool[4];
+    private bool[] _correctlyPressed = new bool[4];
+    private Coroutine[] _keyAnims = new Coroutine[4];
+
+    private void Start()
     {
         _moduleId = _moduleIdCounter++;
-        keys[0].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, keys[0].transform);
-            Debug.Log("TL being clicked!");
-            StartCoroutine(liftKeys(keyObjects[0], meshRenderers[0]));
-            return false;
-        };
-        keys[1].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, keys[1].transform);
-            Debug.Log("TR being clicked!");
-            StartCoroutine(liftKeys(keyObjects[1], meshRenderers[1]));
-            return false;
-        };
-        keys[2].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, keys[2].transform);
-            Debug.Log("BL being clicked!");
-            StartCoroutine(liftKeys(keyObjects[2], meshRenderers[2]));
-            return false;
-        };
-        keys[3].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, keys[3].transform);
-            Debug.Log("BR being clicked!");
-            StartCoroutine(liftKeys(keyObjects[3], meshRenderers[3]));
-            return false;
-        };
-        buttons[0].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, buttons[0].transform);
-            StartCoroutine(pressButton(buttonObjects[0], meshRenderers[4]));
-            pressAtTime(buttons[0], 0);
-            return false;
-        };
-        buttons[1].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, buttons[1].transform);
-            StartCoroutine(pressButton(buttonObjects[1], meshRenderers[5]));
-            pressAtTime(buttons[1], 1);
-            return false;
-        };
-        buttons[2].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, buttons[2].transform);
-            StartCoroutine(pressButton(buttonObjects[2], meshRenderers[6]));
-            pressAtTime(buttons[2], 2);
-            return false;
-        };
-        buttons[3].OnInteract += delegate{
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, buttons[3].transform);
-            StartCoroutine(pressButton(buttonObjects[3], meshRenderers[7]));
-            pressAtTime(buttons[3], 3);
-            return false;
-        };
-    }
-    private void Start(){
-        Beginning();
-    }
-    private void pressAtTime(KMSelectable button, int pos){
-        
-        int time = (int)BombInfo.GetTime() % 10;
-        if (time == correctValues[pos]){
-            Debug.LogFormat("[Keyed Buttons #{0}]Pressed at: {1}", _moduleId, time);
-            numberOfCorrectButtons++;
+        Generate();
+        for (int i = 0; i < 4; i++)
+        {
+            KeySels[i].OnInteract += KeyPress(i);
+            ButtonSels[i].OnInteract += ButtonPress(i);
         }
-        numberOfPresses++;
-        Debug.Log("Presses: " + numberOfPresses);
-        if (numberOfPresses == 4){
-            if (numberOfCorrectButtons != 4){
-                Module.OnStrike();
-                Debug.LogFormat("[Keyed Buttons #{0}] Strike! Resetting buttons and keys.");
-                for (int i = 0; i < keyObjects.Length; i++){
-                    StartCoroutine(bringKeysBack(keyObjects[i], meshRenderers[i]));
+    }
+
+    private KMSelectable.OnInteractHandler KeyPress(int key)
+    {
+        return delegate ()
+        {
+            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
+            KeySels[key].AddInteractionPunch(0.5f);
+            if (_moduleSolved || _isAnimating[key])
+                return false;
+            _keyAnims[key] = StartCoroutine(MoveKey(key));
+            return false;
+        };
+    }
+
+    private KMSelectable.OnInteractHandler ButtonPress(int btn)
+    {
+        return delegate ()
+        {
+            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
+            ButtonSels[btn].AddInteractionPunch(0.5f);
+            StartCoroutine(MoveButton(btn));
+            if (_moduleSolved)
+                return false;
+            var curTime = (int)BombInfo.GetTime() % 10;
+            if (_correctValues[btn] == curTime)
+            {
+                if (_correctlyPressed[btn] == false)
+                    Debug.LogFormat("[Keyed Buttons #{0}] Correctly pressed the {1} button on a {2}.", _moduleId, btn == 0 ? "top left" : btn == 1 ? "top right" : btn == 2 ? "bottom left" : "bottom right", _correctValues[btn]);
+                _correctlyPressed[btn] = true;
+                if (!_correctlyPressed.Contains(false))
+                {
+                    _moduleSolved = true;
+                    Debug.LogFormat("[Keyed Buttons #{0}] All buttons have been correctly pressed. Module solved.", _moduleId);
+                    StartCoroutine(SolveAnimation());
                 }
-                correctValues = new int[]{0, 0, 0, 0};
-                numberOfCorrectButtons = 0;
-                numberOfPresses = 0;
-                Beginning();
             }
-            else{
-                Module.OnPass();
+            else
+            {
+                Debug.LogFormat("[Keyed Buttons #{0}] Incorrectly pressed the {1} button on a {2}, instead of a {3}. Strike.", _moduleId, btn == 0 ? "top left" : btn == 1 ? "top right" : btn == 2 ? "bottom left" : "bottom right", curTime, _correctValues[btn]);
+                Module.HandleStrike();
+                Generate();
             }
-        } 
+            return false;
+        };
     }
+
+    private void Generate()
+    {
+        _isAnimating = new bool[4];
+        _correctlyPressed = new bool[4];
+        for (int i = 0; i < 4; i++)
+        {
+            if (_keyAnims[i] != null)
+                StopCoroutine(_keyAnims[i]);
+            KeyParents[i].transform.localEulerAngles = new Vector3(0f, 0f, 0f);
+            _keyColors[i] = Rnd.Range(0, 7);
+            _buttonColors[i] = Rnd.Range(0, 7);
+            KeyObjs[i].GetComponent<MeshRenderer>().sharedMaterial = ColorMats[_keyColors[i]];
+            ButtonCapObjs[i].GetComponent<MeshRenderer>().sharedMaterial = ColorMats[_buttonColors[i]];
+            _correctValues[i] = _talbeValues[_buttonColors[i]][_keyColors[i]];
+        }
+        Debug.LogFormat("[Keyed Buttons #{0}] The colors of the keys are: {1}.", _moduleId, _keyColors.Select(i => _colornames[i]).Join(", "));
+        Debug.LogFormat("[Keyed Buttons #{0}] The colors of the buttons are: {1}.", _moduleId, _buttonColors.Select(i => _colornames[i]).Join(", "));
+        Debug.LogFormat("[Keyed Buttons #{0}] Time times to press the buttons are: {1}.", _moduleId, _correctValues.Join(", "));
+    }
+
+    private IEnumerator MoveKey(int key)
+    {
+        _isAnimating[key] = true;
+        var duration = 0.7f;
+        var elapsed = 0f;
+        while (elapsed < duration)
+        {
+            KeyParents[key].transform.localEulerAngles = new Vector3(Easing.InOutQuad(elapsed, 0f, key <= 1 ? 120f : -120f, duration), 0f, 0f);
+            yield return null;
+            elapsed += Time.deltaTime;
+        }
+        KeyParents[key].transform.localEulerAngles = new Vector3(key <= 1 ? 120f : -120f, 0f, 0f);
+    }
+
+    private IEnumerator MoveButton(int btn)
+    {
+        var duration = 0.1f;
+        var elapsed = 0f;
+        while (elapsed < duration)
+        {
+            ButtonCapObjs[btn].transform.localPosition = new Vector3(0f, Easing.InOutQuad(elapsed, 0.01f, 0.005f, duration), 0f);
+            yield return null;
+            elapsed += Time.deltaTime;
+        }
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            ButtonCapObjs[btn].transform.localPosition = new Vector3(0f, Easing.InOutQuad(elapsed, 0.005f, 0.01f, duration), 0f);
+            yield return null;
+            elapsed += Time.deltaTime;
+        }
+        ButtonCapObjs[btn].transform.localPosition = new Vector3(0f, 0.01f, 0f);
+    }
+
+    private IEnumerator SolveAnimation()
+    {
+        var duration = 0.7f;
+        var elapsed = 0f;
+        while (elapsed < duration)
+        {
+            for (int key = 0; key < 4; key++)
+                KeyParents[key].transform.localEulerAngles = new Vector3(Easing.InOutQuad(elapsed, key <= 1 ? 120f : -120f, 0f, duration), 0f, 0f);
+            yield return null;
+            elapsed += Time.deltaTime;
+        }
+        for (int key = 0; key < 4; key++)
+            KeyParents[key].transform.localEulerAngles = new Vector3(0f, 0f, 0f);
+        Module.HandlePass();
+        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, transform);
+    }
+
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = "!{0} key {1-4} [Presses 1 of the keys] | !{0} button {1-4} [Presses 1 of the buttons (Should only be used when the key on top of the button is pressed)";
+    private readonly string TwitchHelpMessage = @"!{0} key 1 [Presses key 1.] | !{0} button 3 at 9 [Presses button 3 at a 9.] | Keys and buttons are numbered in reading order.";
 #pragma warning restore 414
-    private IEnumerator ProcessTwitchCommand(string command){
-        var parameters = command.Split(' ');
-        if (Regex.IsMatch(parameters[0], @"^\s*key\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)){
-            if (parameters.Length < 2) { yield return "sendtochaterror Please specify what key you want to press (1-4)."; yield break;}
-            int j;
-            if (int.TryParse(parameters[1], out j))
+
+    private IEnumerator ProcessTwitchCommand(string command)
+    {
+        var m = Regex.Match(command, @"^\s*key\s*([1-4])\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (m.Success)
+        {
+            yield return null;
+            int val;
+            if (!int.TryParse(m.Groups[1].Value, out val))
+                yield break;
+            if (_isAnimating[val - 1])
             {
-                yield return null;
-                j = (j % 4) + 1;
-                keys[j-1].OnInteract();
-            }
-            else
-            {
-                yield return "sendtochaterror Please specify what key you want to press (1-4).";
+                yield return "sendtochaterror Key " + val + " has already been pressed!";
                 yield break;
             }
+            KeySels[val - 1].OnInteract();
+            yield break;
         }
-        if (Regex.IsMatch(parameters[0], @"^\s*button\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)){
-            if (parameters.Length < 2) { yield return "sendtochaterror Please specify what button you want to press (1-4)."; yield break;}
-            int j;
-            if (int.TryParse(parameters[1], out j))
+        m = Regex.Match(command, @"^\s*button\s*([1-4])\s*at\s*([0-9])\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (m.Success)
+        {
+            yield return null;
+            int bVal;
+            int tVal;
+            if (!int.TryParse(m.Groups[1].Value, out bVal))
+                yield break;
+            if (!int.TryParse(m.Groups[2].Value, out tVal))
+                yield break;
+            if (!_isAnimating[bVal - 1])
             {
-                yield return null;
-                j = (j % 4) + 1;
-                buttons[j-1].OnInteract();
-            }
-            else
-            {
-                yield return "sendtochaterror Please specify what button you want to press (1-4).";
+                yield return "sendtochaterror You havent opened Key " + bVal + " yet!";
                 yield break;
             }
+            yield return "solve";
+            yield return "strike";
+            while ((int)BombInfo.GetTime() % 10 != tVal)
+                yield return null;
+            ButtonSels[bVal - 1].OnInteract();
         }
+    }
+
+    private IEnumerator TwitchHandleForcedSolve()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            if (!_isAnimating[i])
+            {
+                KeySels[i].OnInteract();
+                yield return new WaitForSeconds(0.2f);
+            }
+        }
+        int?[] autoSolveVals = _correctValues.Select(i => (int?)i).ToArray();
+        while (_correctlyPressed.Contains(false))
+        {
+            while (!autoSolveVals.Contains((int)BombInfo.GetTime() % 10))
+                yield return true;
+            var ix = Array.IndexOf(autoSolveVals, (int)BombInfo.GetTime() % 10);
+            if (!_correctlyPressed[ix])
+            {
+                ButtonSels[ix].OnInteract();
+                autoSolveVals[ix] = null;
+                yield return new WaitForSeconds(0.1f);
+            }
+            yield return true;
+        }
+        while (!_moduleSolved)
+            yield return true;
     }
 }
