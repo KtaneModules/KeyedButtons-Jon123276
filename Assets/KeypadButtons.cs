@@ -33,7 +33,7 @@ public class KeypadButtons : MonoBehaviour
     private int _moduleId;
     private static int _moduleIdCounter = 1;
     private bool _moduleSolved;
-
+    private bool _trueModuleSolved;
     private int[] _keyColors = new int[4];
     private int[] _buttonColors = new int[4];
     private bool[] _isAnimating = new bool[4];
@@ -164,6 +164,7 @@ public class KeypadButtons : MonoBehaviour
         for (int key = 0; key < 4; key++)
             KeyParents[key].transform.localEulerAngles = new Vector3(0f, 0f, 0f);
         Module.HandlePass();
+        _trueModuleSolved = true;
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, transform);
     }
 
@@ -235,7 +236,7 @@ public class KeypadButtons : MonoBehaviour
             }
             yield return true;
         }
-        while (!_moduleSolved)
+        while (!_trueModuleSolved)
             yield return true;
     }
 }

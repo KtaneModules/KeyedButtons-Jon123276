@@ -453,7 +453,7 @@ GameObject:
   - component: {fileID: 114497262963888876}
   - component: {fileID: 114265602700865408}
   m_Layer: 0
-  m_Name: KeyedButtons
+  m_Name: KeyedButtons 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2803,7 +2803,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ModuleType: keyedButtons
   ModuleDisplayName: Keyed Buttons
-  RequiresTimerVisibility: 0
+  RequiresTimerVisibility: 1
 --- !u!114 &114700809448685720
 MonoBehaviour:
   m_ObjectHideFlags: 1
